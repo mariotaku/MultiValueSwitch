@@ -4,5 +4,6 @@
         <attr name="android:entries"/>
         <attr name="android:entryValues"/>
         <attr name="android:position"/>
+        <attr name="android:enabled"/>
     </declare-styleable>
 </resources>

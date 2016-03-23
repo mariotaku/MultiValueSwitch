@@ -194,6 +194,7 @@ public class MultiValueSwitch extends View {
         mEntries = a.getTextArray(R.styleable.MultiValueSwitch_android_entries);
         mEntryValues = a.getTextArray(R.styleable.MultiValueSwitch_android_entryValues);
         mThumbPosition = getThumbPosition(a.getInt(R.styleable.MultiValueSwitch_android_position, 0));
+        setEnabled(a.getBoolean(R.styleable.MultiValueSwitch_android_enabled, true));
         a.recycle();
 
         final ViewConfiguration config = ViewConfiguration.get(context);
@@ -479,7 +480,7 @@ public class MultiValueSwitch extends View {
                     // Allow super class to handle pressed state, etc.
                     super.onTouchEvent(ev);
                     return true;
-                } else if (touchedDown) {
+                } else if (touchedDown && isEnabled()) {
                     // Handle click event
                     final float x = ev.getX();
                     final int thumbScrollStart = (getWidth() - getThumbScrollRange()) / 2;
