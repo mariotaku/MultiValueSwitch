@@ -1,8 +1,6 @@
 apply plugin: 'com.android.library'
 apply plugin: 'maven'
 
-version = '0.9.1'
-
 android {
     compileSdkVersion 23
     buildToolsVersion "23.0.2"
@@ -11,7 +9,7 @@ android {
         minSdkVersion 7
         targetSdkVersion 23
         versionCode 1
-        versionName "0.9"
+        versionName "0.9.2"
     }
     buildTypes {
         release {
@@ -30,6 +28,7 @@ dependencies {
 uploadArchives {
     repositories {
         mavenDeployer {
+            pom.version = android.defaultConfig.versionName
             pom.groupId = 'com.github.mariotaku'
             pom.artifactId = 'MultiValueSwitch'
         }

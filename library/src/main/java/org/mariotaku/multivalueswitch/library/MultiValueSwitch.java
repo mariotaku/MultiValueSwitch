@@ -193,7 +193,11 @@ public class MultiValueSwitch extends View {
                 attrs, R.styleable.MultiValueSwitch, defStyleAttr, 0);
         mEntries = a.getTextArray(R.styleable.MultiValueSwitch_android_entries);
         mEntryValues = a.getTextArray(R.styleable.MultiValueSwitch_android_entryValues);
-        mThumbPosition = getThumbPosition(a.getInt(R.styleable.MultiValueSwitch_android_position, 0));
+        int position = findPosition(a.getString(R.styleable.MultiValueSwitch_android_value));
+        if (position == -1) {
+            position = a.getInt(R.styleable.MultiValueSwitch_android_position, 0);
+        }
+        mThumbPosition = getThumbPosition(position);
         setEnabled(a.getBoolean(R.styleable.MultiValueSwitch_android_enabled, true));
         a.recycle();
 
@@ -581,11 +585,11 @@ public class MultiValueSwitch extends View {
     }
 
     private float getThumbPosition(int checkedPosition) {
-        return checkedPosition / (float) (mEntryValues.length - 1);
+        return constrain(checkedPosition / (float) (mEntryValues.length - 1), 0, 1);
     }
 
     private int getCheckedPosition(float thumbPosition) {
-        return Math.round(thumbPosition * (mEntryValues.length - 1));
+        return Math.round(constrain(thumbPosition, 0, 1) * (mEntryValues.length - 1));
     }
 
     private void cancelPositionAnimator() {
@@ -600,15 +604,23 @@ public class MultiValueSwitch extends View {
     }
 
     public boolean setValue(@Nullable String value) {
-        if (value == null) return false;
+        int position = findPosition(value);
+        if (position != -1) {
+            setCheckedPosition(position);
+            return true;
+        }
+        return false;
+    }
+
+    private int findPosition(@Nullable String value) {
+        if (value == null) return -1;
         for (int i = 0, j = mEntryValues.length; i < j; i++) {
             CharSequence item = mEntryValues[i];
             if (value.contentEquals(item)) {
-                setCheckedPosition(i);
-                return true;
+                return i;
             }
         }
-        return false;
+        return -1;
     }
 
     public CharSequence getValue() {
