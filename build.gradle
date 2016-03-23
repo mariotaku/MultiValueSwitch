@@ -12,18 +12,6 @@ buildscript {
     }
 }
 
-allprojects {
-    apply plugin: 'maven'
-
-    group = 'com.github.mariotaku.MultiValueSwitch'
-    version = '0.9.1'
-
-    repositories {
-        jcenter()
-    }
-}
-
-
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
