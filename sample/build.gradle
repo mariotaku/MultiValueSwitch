@@ -19,9 +19,13 @@ android {
     }
 }
 
+repositories {
+    jcenter();
+}
+
 dependencies {
     compile project(':library')
     compile 'com.android.support:appcompat-v7:23.2.1'
-    
+
     testCompile 'junit:junit:4.12'
 }
