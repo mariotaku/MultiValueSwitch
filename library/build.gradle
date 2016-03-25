@@ -31,10 +31,10 @@ dependencies {
 
 uploadArchives {
     repositories {
-        mavenDeployer {
+        mavenInstaller {
             pom.version = android.defaultConfig.versionName
             pom.groupId = 'com.github.mariotaku'
-            pom.artifactId = 'MultiValueSwitch'
+            pom.artifactId = rootProject.name
         }
     }
 }
