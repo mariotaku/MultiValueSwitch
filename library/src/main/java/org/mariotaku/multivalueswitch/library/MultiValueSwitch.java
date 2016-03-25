@@ -20,6 +20,7 @@ import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Region;
 import android.graphics.drawable.Drawable;
@@ -71,7 +72,8 @@ public class MultiValueSwitch extends View {
     private int mSwitchMinWidth;
     private int mSwitchPadding;
     private boolean mSplitTrack;
-
+    private Paint mPointPaint;
+    private float mPointRadius;
 
     private int mTouchMode;
     private int mTouchSlop;
@@ -178,6 +180,12 @@ public class MultiValueSwitch extends View {
         if (mTrackDrawable != null) {
             mTrackDrawable.setCallback(this);
         }
+
+        mPointPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mPointPaint.setColor(0x33000000);
+        mPointPaint.setStyle(Paint.Style.FILL);
+        mPointRadius = getResources().getDisplayMetrics().density * 2;
+
         mSwitchMinWidth = a.getDimensionPixelSize(
                 android.support.v7.appcompat.R.styleable.SwitchCompat_switchMinWidth, 0);
         mSwitchPadding = a.getDimensionPixelSize(
@@ -487,8 +495,9 @@ public class MultiValueSwitch extends View {
                 } else if (touchedDown && isEnabled()) {
                     // Handle click event
                     final float x = ev.getX();
-                    final int thumbScrollStart = (getWidth() - getThumbScrollRange()) / 2;
-                    final int thumbScrollRange = getThumbScrollRange();
+
+                    final int thumbScrollStart = mSwitchLeft + mThumbWidth - mThumbWidth / 2;
+                    final int thumbScrollRange = mSwitchRight - mSwitchLeft - mThumbWidth;
                     float thumbPos = 0;
                     if (thumbScrollRange != 0) {
                         thumbPos = constrain((x - thumbScrollStart) / thumbScrollRange, 0, 1);
@@ -788,6 +797,16 @@ public class MultiValueSwitch extends View {
             } else {
                 trackDrawable.draw(canvas);
             }
+
+            final int thumbScrollStart = mSwitchLeft + mThumbWidth - mThumbWidth / 2;
+            final int thumbScrollRange = mSwitchRight - mSwitchLeft - mThumbWidth;
+            final int y = trackDrawable.getBounds().centerY();
+            for (int i = 0, j = mEntryValues.length; i < j; i++) {
+                if (i == 0 || i == j - 1) continue;
+
+                canvas.drawCircle(thumbScrollStart + i * (thumbScrollRange / (j - 1)), y,
+                        mPointRadius, mPointPaint);
+            }
         }
 
         final int saveCount = canvas.save();
@@ -797,6 +816,7 @@ public class MultiValueSwitch extends View {
         }
 
         canvas.restoreToCount(saveCount);
+
     }
 
     /**
