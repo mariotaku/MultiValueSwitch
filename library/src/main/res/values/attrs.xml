@@ -2,9 +2,8 @@
 <resources>
     <declare-styleable name="MultiValueSwitch">
         <attr name="android:entries"/>
-        <attr name="android:entryValues"/>
+        <attr name="android:max"/>
         <attr name="android:position"/>
         <attr name="android:enabled"/>
-        <attr name="android:value"/>
     </declare-styleable>
 </resources>

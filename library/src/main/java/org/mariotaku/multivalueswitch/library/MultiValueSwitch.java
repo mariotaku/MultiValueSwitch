@@ -25,7 +25,7 @@ import android.graphics.Rect;
 import android.graphics.Region;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
-import android.support.annotation.NonNull;
+import android.support.annotation.IntRange;
 import android.support.annotation.Nullable;
 import android.support.v4.graphics.drawable.DrawableCompat;
 import android.support.v4.view.MotionEventCompat;
@@ -63,9 +63,7 @@ public class MultiValueSwitch extends View {
     private static final String ACCESSIBILITY_EVENT_CLASS_NAME = "android.widget.Switch";
 
     @Nullable
-    private final CharSequence[] mEntries;
-    @NonNull
-    private final CharSequence[] mEntryValues;
+    private CharSequence[] mEntries;
 
     private Drawable mThumbDrawable;
     private Drawable mTrackDrawable;
@@ -134,6 +132,7 @@ public class MultiValueSwitch extends View {
             android.R.attr.state_checked
     };
     private OnCheckedChangeListener mOnCheckedChangeListener;
+    private int mMax;
 
 
     /**
@@ -196,16 +195,11 @@ public class MultiValueSwitch extends View {
 
         a.recycle();
 
-
         a = TintTypedArray.obtainStyledAttributes(context,
                 attrs, R.styleable.MultiValueSwitch, defStyleAttr, 0);
-        mEntries = a.getTextArray(R.styleable.MultiValueSwitch_android_entries);
-        mEntryValues = a.getTextArray(R.styleable.MultiValueSwitch_android_entryValues);
-        int position = findPosition(a.getString(R.styleable.MultiValueSwitch_android_value));
-        if (position == -1) {
-            position = a.getInt(R.styleable.MultiValueSwitch_android_position, 0);
-        }
-        mThumbPosition = getThumbPosition(position);
+        setMax(a.getInt(R.styleable.MultiValueSwitch_android_max, 2));
+        setEntries(a.getTextArray(R.styleable.MultiValueSwitch_android_entries));
+        mThumbPosition = getThumbPosition(a.getInt(R.styleable.MultiValueSwitch_android_position, 0));
         setEnabled(a.getBoolean(R.styleable.MultiValueSwitch_android_enabled, true));
         a.recycle();
 
@@ -216,6 +210,11 @@ public class MultiValueSwitch extends View {
         // Refresh display with current params
         refreshDrawableState();
         setCheckedPosition(getCheckedPosition());
+    }
+
+    public void setEntries(@Nullable CharSequence[] entries) {
+        if (entries != null && entries.length != getMax()) throw new IllegalArgumentException();
+        mEntries = entries;
     }
 
     /**
@@ -374,7 +373,7 @@ public class MultiValueSwitch extends View {
         }
 
         final int switchWidth = Math.max(mSwitchMinWidth,
-                mEntryValues.length * mThumbWidth + paddingLeft + paddingRight);
+                getMax() * mThumbWidth + paddingLeft + paddingRight);
         final int switchHeight = Math.max(trackHeight, thumbHeight);
         mSwitchWidth = switchWidth;
         mSwitchHeight = switchHeight;
@@ -544,9 +543,9 @@ public class MultiValueSwitch extends View {
             final float xvel = mVelocityTracker.getXVelocity();
             if (Math.abs(xvel) > mMinFlingVelocity) {
                 int diff = Math.round(xvel / (ViewUtils.isLayoutRtl(this) ? -Math.abs(xvel) : Math.abs(xvel)));
-                newState = Math.min(mEntryValues.length - 1, Math.max(0, getCheckedPosition() + diff));
+                newState = Math.min(getMax() - 1, Math.max(0, getCheckedPosition() + diff));
             } else {
-                newState = getTargetCheckedState();
+                newState = getCheckedPosition();
             }
         } else {
             newState = oldState;
@@ -594,11 +593,11 @@ public class MultiValueSwitch extends View {
     }
 
     private float getThumbPosition(int checkedPosition) {
-        return constrain(checkedPosition / (float) (mEntryValues.length - 1), 0, 1);
+        return constrain(checkedPosition / (float) (getMax() - 1), 0, 1);
     }
 
     private int getCheckedPosition(float thumbPosition) {
-        return Math.round(constrain(thumbPosition, 0, 1) * (mEntryValues.length - 1));
+        return Math.round(constrain(thumbPosition, 0, 1) * (getMax() - 1));
     }
 
     private void cancelPositionAnimator() {
@@ -606,44 +605,6 @@ public class MultiValueSwitch extends View {
             clearAnimation();
             mPositionAnimator = null;
         }
-    }
-
-    private int getTargetCheckedState() {
-        return getCheckedPosition(mThumbPosition);
-    }
-
-    public boolean setValue(@Nullable String value) {
-        int position = findPosition(value);
-        if (position != -1) {
-            setCheckedPosition(position);
-            return true;
-        }
-        return false;
-    }
-
-    private int findPosition(@Nullable String value) {
-        if (value == null) return -1;
-        for (int i = 0, j = mEntryValues.length; i < j; i++) {
-            CharSequence item = mEntryValues[i];
-            if (value.contentEquals(item)) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    public CharSequence getValue() {
-        return mEntryValues[getCheckedPosition()];
-    }
-
-    /**
-     * Sets the thumb position as a decimal value between 0 (off) and 1 (on).
-     *
-     * @param thumbPosition new position between [0,1]
-     */
-    private void setThumbPosition(float thumbPosition) {
-        mThumbPosition = thumbPosition;
-        invalidate();
     }
 
     public void setCheckedPosition(int checkedPosition) {
@@ -664,6 +625,16 @@ public class MultiValueSwitch extends View {
 
     public int getCheckedPosition() {
         return getCheckedPosition(mThumbPosition);
+    }
+
+    /**
+     * Sets the thumb position as a decimal value between 0 (off) and 1 (on).
+     *
+     * @param thumbPosition new position between [0,1]
+     */
+    private void setThumbPosition(float thumbPosition) {
+        mThumbPosition = thumbPosition;
+        invalidate();
     }
 
     @Override
@@ -801,7 +772,7 @@ public class MultiValueSwitch extends View {
             final int thumbScrollStart = mSwitchLeft + mThumbWidth - mThumbWidth / 2;
             final int thumbScrollRange = mSwitchRight - mSwitchLeft - mThumbWidth;
             final int y = trackDrawable.getBounds().centerY();
-            for (int i = 0, j = mEntryValues.length; i < j; i++) {
+            for (int i = 0, j = getMax(); i < j; i++) {
                 if (i == 0 || i == j - 1) continue;
 
                 canvas.drawCircle(thumbScrollStart + i * (thumbScrollRange / (j - 1)), y,
@@ -956,6 +927,15 @@ public class MultiValueSwitch extends View {
 
     public void setOnCheckedChangeListener(OnCheckedChangeListener onCheckedChangeListener) {
         mOnCheckedChangeListener = onCheckedChangeListener;
+    }
+
+    public int getMax() {
+        return mMax;
+    }
+
+    public void setMax(@IntRange(from = 2) int max) {
+        mMax = max;
+        requestLayout();
     }
 
     public interface OnCheckedChangeListener {
