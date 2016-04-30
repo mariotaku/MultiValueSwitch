@@ -19,19 +19,25 @@ package org.mariotaku.multivalueswitch.library;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.Region;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
+import android.support.annotation.DrawableRes;
 import android.support.annotation.IntRange;
 import android.support.annotation.Nullable;
 import android.support.v4.graphics.drawable.DrawableCompat;
 import android.support.v4.view.MotionEventCompat;
+import android.support.v4.view.TintableBackgroundView;
 import android.support.v4.view.ViewCompat;
 import android.support.v7.widget.AppCompatDrawableManager;
+import android.support.v7.widget.MVS_AppCompatBackgroundHelperAccessor;
 import android.support.v7.widget.MVS_DrawableUtilsAccessor;
+import android.support.v7.widget.MVS_TintContextWrapperAccessor;
 import android.support.v7.widget.TintTypedArray;
 import android.support.v7.widget.ViewUtils;
 import android.text.TextUtils;
@@ -51,7 +57,7 @@ import android.view.animation.Transformation;
  * make any attempt to use the platform provided widget on those devices which it is available
  * normally.
  */
-public class MultiValueSwitch extends View {
+public class MultiValueSwitch extends View implements TintableBackgroundView {
     private static final int THUMB_ANIMATION_DURATION = 250;
 
     private static final int TOUCH_MODE_IDLE = 0;
@@ -61,12 +67,29 @@ public class MultiValueSwitch extends View {
     // We force the accessibility events to have a class name of Switch, since screen readers
     // already know how to handle their events
     private static final String ACCESSIBILITY_EVENT_CLASS_NAME = "android.widget.Switch";
+    private final MVS_AppCompatBackgroundHelperAccessor mBackgroundTintHelper;
 
     @Nullable
     private CharSequence[] mEntries;
 
+
     private Drawable mThumbDrawable;
+    private ColorStateList mThumbTintList = null;
+    private PorterDuff.Mode mThumbTintMode = null;
+    private boolean mHasThumbTint = false;
+    private boolean mHasThumbTintMode = false;
+
     private Drawable mTrackDrawable;
+    private ColorStateList mTrackTintList = null;
+    private PorterDuff.Mode mTrackTintMode = null;
+    private boolean mHasTrackTint = false;
+    private boolean mHasTrackTintMode = false;
+
+    private ColorStateList mBackgroundTintList = null;
+    private PorterDuff.Mode mBackgroundTintMode = null;
+    private boolean mHasBackgroundTint = false;
+    private boolean mHasBackgroundTintMode = false;
+
     private int mSwitchMinWidth;
     private int mSwitchPadding;
     private boolean mSplitTrack;
@@ -133,6 +156,7 @@ public class MultiValueSwitch extends View {
     };
     private OnCheckedChangeListener mOnCheckedChangeListener;
     private int mMax;
+    private OnThumbPositionChangeListener mOnCheckedOffsetChangeListener;
 
 
     /**
@@ -167,7 +191,12 @@ public class MultiValueSwitch extends View {
      */
     @SuppressLint("PrivateResource")
     public MultiValueSwitch(Context context, AttributeSet attrs, int defStyleAttr) {
-        super(context, attrs, defStyleAttr);
+        super(MVS_TintContextWrapperAccessor.wrap(context), attrs, defStyleAttr);
+
+
+        mDrawableManager = AppCompatDrawableManager.get();
+        mBackgroundTintHelper = new MVS_AppCompatBackgroundHelperAccessor(this, mDrawableManager);
+        mBackgroundTintHelper.loadFromAttributes(attrs, defStyleAttr);
 
         TintTypedArray a = TintTypedArray.obtainStyledAttributes(context,
                 attrs, android.support.v7.appcompat.R.styleable.SwitchCompat, defStyleAttr, 0);
@@ -190,8 +219,6 @@ public class MultiValueSwitch extends View {
         mSwitchPadding = a.getDimensionPixelSize(
                 android.support.v7.appcompat.R.styleable.SwitchCompat_switchPadding, 0);
         mSplitTrack = a.getBoolean(android.support.v7.appcompat.R.styleable.SwitchCompat_splitTrack, false);
-
-        mDrawableManager = AppCompatDrawableManager.get();
 
         a.recycle();
 
@@ -286,6 +313,81 @@ public class MultiValueSwitch extends View {
     }
 
     /**
+     * Applies a tint to the track drawable. Does not modify the current
+     * tint mode, which is {@link PorterDuff.Mode#SRC_IN} by default.
+     * <p/>
+     * Subsequent calls to {@link #setTrackDrawable(Drawable)} will
+     * automatically mutate the drawable and apply the specified tint and tint
+     * mode using {@link Drawable#setTintList(ColorStateList)}.
+     *
+     * @param tint the tint to apply, may be {@code null} to clear tint
+     * @see #getTrackTintList()
+     * @see Drawable#setTintList(ColorStateList)
+     */
+    public void setTrackTintList(@Nullable ColorStateList tint) {
+        mTrackTintList = tint;
+        mHasTrackTint = true;
+
+        applyTrackTint();
+    }
+
+    /**
+     * @return the tint applied to the track drawable
+     * @see #setTrackTintList(ColorStateList)
+     */
+    @Nullable
+    public ColorStateList getTrackTintList() {
+        return mTrackTintList;
+    }
+
+    /**
+     * Specifies the blending mode used to apply the tint specified by
+     * {@link #setTrackTintList(ColorStateList)}} to the track drawable.
+     * The default mode is {@link PorterDuff.Mode#SRC_IN}.
+     *
+     * @param tintMode the blending mode used to apply the tint, may be
+     *                 {@code null} to clear tint
+     * @see #getTrackTintMode()
+     * @see Drawable#setTintMode(PorterDuff.Mode)
+     */
+    public void setTrackTintMode(@Nullable PorterDuff.Mode tintMode) {
+        mTrackTintMode = tintMode;
+        mHasTrackTintMode = true;
+
+        applyTrackTint();
+    }
+
+    /**
+     * @return the blending mode used to apply the tint to the track
+     * drawable
+     * @see #setTrackTintMode(PorterDuff.Mode)
+     */
+    @Nullable
+    public PorterDuff.Mode getTrackTintMode() {
+        return mTrackTintMode;
+    }
+
+    private void applyTrackTint() {
+        if (mTrackDrawable != null && (mHasTrackTint || mHasTrackTintMode)) {
+            mTrackDrawable = mTrackDrawable.mutate();
+
+            if (mHasTrackTint) {
+                DrawableCompat.setTintList(mTrackDrawable, mTrackTintList);
+            }
+
+            if (mHasTrackTintMode) {
+                DrawableCompat.setTintMode(mTrackDrawable, mTrackTintMode);
+            }
+
+            // The drawable (or one of its children) may not have been
+            // stateful before applying the tint, so let's try again.
+            if (mTrackDrawable.isStateful()) {
+                mTrackDrawable.setState(getDrawableState());
+            }
+        }
+    }
+
+    /**
      * Set the drawable used for the switch "thumb" - the piece that the user
      * can physically touch and drag along the track.
      *
@@ -314,6 +416,150 @@ public class MultiValueSwitch extends View {
      */
     public Drawable getThumbDrawable() {
         return mThumbDrawable;
+    }
+
+    /**
+     * Applies a tint to the thumb drawable. Does not modify the current
+     * tint mode, which is {@link PorterDuff.Mode#SRC_IN} by default.
+     * <p/>
+     * Subsequent calls to {@link #setThumbDrawable(Drawable)} will
+     * automatically mutate the drawable and apply the specified tint and tint
+     * mode using {@link Drawable#setTintList(ColorStateList)}.
+     *
+     * @param tint the tint to apply, may be {@code null} to clear tint
+     * @see #getThumbTintList()
+     * @see Drawable#setTintList(ColorStateList)
+     */
+    public void setThumbTintList(@Nullable ColorStateList tint) {
+        mThumbTintList = tint;
+        mHasThumbTint = true;
+
+        applyThumbTint();
+    }
+
+    /**
+     * @return the tint applied to the thumb drawable
+     * @see #setThumbTintList(ColorStateList)
+     */
+    @Nullable
+    public ColorStateList getThumbTintList() {
+        return mThumbTintList;
+    }
+
+    /**
+     * Specifies the blending mode used to apply the tint specified by
+     * {@link #setThumbTintList(ColorStateList)}} to the thumb drawable.
+     * The default mode is {@link PorterDuff.Mode#SRC_IN}.
+     *
+     * @param tintMode the blending mode used to apply the tint, may be
+     *                 {@code null} to clear tint
+     * @see #getThumbTintMode()
+     * @see Drawable#setTintMode(PorterDuff.Mode)
+     */
+    public void setThumbTintMode(@Nullable PorterDuff.Mode tintMode) {
+        mThumbTintMode = tintMode;
+        mHasThumbTintMode = true;
+
+        applyThumbTint();
+    }
+
+    /**
+     * @return the blending mode used to apply the tint to the thumb
+     * drawable
+     * @see #setThumbTintMode(PorterDuff.Mode)
+     */
+    @Nullable
+    public PorterDuff.Mode getThumbTintMode() {
+        return mThumbTintMode;
+    }
+
+    private void applyThumbTint() {
+        if (mThumbDrawable != null && (mHasThumbTint || mHasThumbTintMode)) {
+            mThumbDrawable = mThumbDrawable.mutate();
+
+            if (mHasThumbTint) {
+                DrawableCompat.setTintList(mThumbDrawable, mThumbTintList);
+            }
+
+            if (mHasThumbTintMode) {
+                DrawableCompat.setTintMode(mThumbDrawable, mThumbTintMode);
+            }
+
+            // The drawable (or one of its children) may not have been
+            // stateful before applying the tint, so let's try again.
+            if (mThumbDrawable.isStateful()) {
+                mThumbDrawable.setState(getDrawableState());
+            }
+        }
+    }
+
+    @Override
+    public void setBackgroundResource(@DrawableRes int resId) {
+        super.setBackgroundResource(resId);
+        if (mBackgroundTintHelper != null) {
+            mBackgroundTintHelper.onSetBackgroundResource(resId);
+        }
+    }
+
+    @Override
+    public void setBackgroundDrawable(Drawable background) {
+        super.setBackgroundDrawable(background);
+        if (mBackgroundTintHelper != null) {
+            mBackgroundTintHelper.onSetBackgroundDrawable(background);
+        }
+    }
+
+
+    /**
+     * This should be accessed via
+     * {@link android.support.v4.view.ViewCompat#setBackgroundTintList(android.view.View, ColorStateList)}
+     *
+     * @hide
+     */
+    @Override
+    public void setSupportBackgroundTintList(@Nullable ColorStateList tint) {
+        if (mBackgroundTintHelper != null) {
+            mBackgroundTintHelper.setSupportBackgroundTintList(tint);
+        }
+    }
+
+    /**
+     * This should be accessed via
+     * {@link android.support.v4.view.ViewCompat#getBackgroundTintList(android.view.View)}
+     *
+     * @hide
+     */
+    @Override
+    @Nullable
+    public ColorStateList getSupportBackgroundTintList() {
+        return mBackgroundTintHelper != null
+                ? mBackgroundTintHelper.getSupportBackgroundTintList() : null;
+    }
+
+    /**
+     * This should be accessed via
+     * {@link android.support.v4.view.ViewCompat#setBackgroundTintMode(android.view.View, PorterDuff.Mode)}
+     *
+     * @hide
+     */
+    @Override
+    public void setSupportBackgroundTintMode(@Nullable PorterDuff.Mode tintMode) {
+        if (mBackgroundTintHelper != null) {
+            mBackgroundTintHelper.setSupportBackgroundTintMode(tintMode);
+        }
+    }
+
+    /**
+     * This should be accessed via
+     * {@link android.support.v4.view.ViewCompat#getBackgroundTintMode(android.view.View)}
+     *
+     * @hide
+     */
+    @Override
+    @Nullable
+    public PorterDuff.Mode getSupportBackgroundTintMode() {
+        return mBackgroundTintHelper != null
+                ? mBackgroundTintHelper.getSupportBackgroundTintMode() : null;
     }
 
     /**
@@ -634,8 +880,13 @@ public class MultiValueSwitch extends View {
      */
     private void setThumbPosition(float thumbPosition) {
         mThumbPosition = thumbPosition;
+        if (mOnCheckedOffsetChangeListener != null) {
+            final float positionOffset = constrain(thumbPosition, 0, 1) * (getMax() - 1);
+            mOnCheckedOffsetChangeListener.onThumbPositionChange(positionOffset);
+        }
         invalidate();
     }
+
 
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
@@ -835,6 +1086,9 @@ public class MultiValueSwitch extends View {
     @Override
     protected void drawableStateChanged() {
         super.drawableStateChanged();
+        if (mBackgroundTintHelper != null) {
+            mBackgroundTintHelper.applySupportBackgroundTint();
+        }
 
         final int[] myDrawableState = getDrawableState();
 
@@ -925,10 +1179,6 @@ public class MultiValueSwitch extends View {
         return amount < low ? low : (amount > high ? high : amount);
     }
 
-    public void setOnCheckedChangeListener(OnCheckedChangeListener onCheckedChangeListener) {
-        mOnCheckedChangeListener = onCheckedChangeListener;
-    }
-
     public int getMax() {
         return mMax;
     }
@@ -938,8 +1188,20 @@ public class MultiValueSwitch extends View {
         requestLayout();
     }
 
+    public void setOnCheckedChangeListener(OnCheckedChangeListener onCheckedChangeListener) {
+        mOnCheckedChangeListener = onCheckedChangeListener;
+    }
+
+    public void setOnThumbOffsetChangeListener(OnThumbPositionChangeListener onCheckedOffsetChangeListener) {
+        mOnCheckedOffsetChangeListener = onCheckedOffsetChangeListener;
+    }
+
     public interface OnCheckedChangeListener {
         void onCheckedChange(int position);
+    }
+
+    public interface OnThumbPositionChangeListener {
+        void onThumbPositionChange(float positionOffset);
     }
 
     private class ThumbAnimation extends Animation {

@@ -16,6 +16,7 @@
         android:id="@+id/mvs"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:background="?selectableItemBackgroundBorderless"
         android:max="3"/>
 
     <Button
