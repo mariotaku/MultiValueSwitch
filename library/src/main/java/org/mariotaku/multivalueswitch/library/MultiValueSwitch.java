@@ -195,7 +195,7 @@ public class MultiValueSwitch extends View implements TintableBackgroundView {
 
 
         mDrawableManager = AppCompatDrawableManager.get();
-        mBackgroundTintHelper = new MVS_AppCompatBackgroundHelperAccessor(this, mDrawableManager);
+        mBackgroundTintHelper = new MVS_AppCompatBackgroundHelperAccessor(this);
         mBackgroundTintHelper.loadFromAttributes(attrs, defStyleAttr);
 
         TintTypedArray a = TintTypedArray.obtainStyledAttributes(context,

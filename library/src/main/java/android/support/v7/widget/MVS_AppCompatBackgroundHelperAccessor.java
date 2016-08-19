@@ -12,8 +12,8 @@ import android.view.View;
 public class MVS_AppCompatBackgroundHelperAccessor {
     private final AppCompatBackgroundHelper mHelper;
 
-    public MVS_AppCompatBackgroundHelperAccessor(View view, AppCompatDrawableManager manager) {
-        mHelper = new AppCompatBackgroundHelper(view, manager);
+    public MVS_AppCompatBackgroundHelperAccessor(View view) {
+        mHelper = new AppCompatBackgroundHelper(view);
     }
 
     public void loadFromAttributes(AttributeSet attrs, int defStyleAttr) {
