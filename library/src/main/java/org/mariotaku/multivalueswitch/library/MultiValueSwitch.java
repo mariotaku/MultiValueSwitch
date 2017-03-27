@@ -57,6 +57,7 @@ import android.view.animation.Transformation;
  * make any attempt to use the platform provided widget on those devices which it is available
  * normally.
  */
+@SuppressWarnings("RestrictedApi")
 public class MultiValueSwitch extends View implements TintableBackgroundView {
     private static final int THUMB_ANIMATION_DURATION = 250;
 
@@ -157,6 +158,8 @@ public class MultiValueSwitch extends View implements TintableBackgroundView {
     private OnCheckedChangeListener mOnCheckedChangeListener;
     private int mMax;
     private OnThumbPositionChangeListener mOnCheckedOffsetChangeListener;
+    private int[] mHighlightCheckedPositions;
+    private int mTargetCheckedPosition;
 
 
     /**
@@ -581,6 +584,15 @@ public class MultiValueSwitch extends View implements TintableBackgroundView {
         return mSplitTrack;
     }
 
+    public int[] getHighlightCheckedPositions() {
+        return mHighlightCheckedPositions;
+    }
+
+    public void setHighlightCheckedPositions(final int[] highlightCheckedPositions) {
+        mHighlightCheckedPositions = highlightCheckedPositions;
+        refreshDrawableState();
+    }
+
     @Override
     public void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
 
@@ -806,7 +818,7 @@ public class MultiValueSwitch extends View implements TintableBackgroundView {
     }
 
     private void animateThumbToCheckedPosition(final int newCheckedPosition) {
-        final int oldPosition = getCheckedPosition();
+        mTargetCheckedPosition = newCheckedPosition;
         if (mPositionAnimator != null) {
             // If there's a current animator running, cancel it
             cancelPositionAnimator();
@@ -817,6 +829,7 @@ public class MultiValueSwitch extends View implements TintableBackgroundView {
         mPositionAnimator.setAnimationListener(new Animation.AnimationListener() {
             @Override
             public void onAnimationStart(Animation animation) {
+                refreshDrawableState();
             }
 
             @Override
@@ -828,6 +841,8 @@ public class MultiValueSwitch extends View implements TintableBackgroundView {
                     if (mOnCheckedChangeListener != null) {
                         mOnCheckedChangeListener.onCheckedChange(newCheckedPosition);
                     }
+                    mTargetCheckedPosition = -1;
+                    refreshDrawableState();
                 }
             }
 
@@ -857,6 +872,7 @@ public class MultiValueSwitch extends View implements TintableBackgroundView {
         if (getWindowToken() != null && ViewCompat.isLaidOut(this) && isShown()) {
             animateThumbToCheckedPosition(checkedPosition);
         } else {
+            mTargetCheckedPosition = -1;
             final int oldPosition = getCheckedPosition();
             // Immediately move the thumb to the new position.
             cancelPositionAnimator();
@@ -867,6 +883,7 @@ public class MultiValueSwitch extends View implements TintableBackgroundView {
                 }
             }
         }
+        refreshDrawableState();
     }
 
     public int getCheckedPosition() {
@@ -1079,7 +1096,9 @@ public class MultiValueSwitch extends View implements TintableBackgroundView {
     @Override
     protected int[] onCreateDrawableState(int extraSpace) {
         final int[] drawableState = super.onCreateDrawableState(extraSpace + 1);
-        mergeDrawableStates(drawableState, CHECKED_STATE_SET);
+        if (isInCheckedState()) {
+            mergeDrawableStates(drawableState, CHECKED_STATE_SET);
+        }
         return drawableState;
     }
 
@@ -1165,6 +1184,19 @@ public class MultiValueSwitch extends View implements TintableBackgroundView {
                 }
             }
         }
+    }
+
+    private boolean isInCheckedState() {
+        final int[] highlightPositions = mHighlightCheckedPositions;
+        if (highlightPositions == null) return false;
+        int checkedPosition = mTargetCheckedPosition;
+        if (checkedPosition < 0) {
+            checkedPosition = getCheckedPosition();
+        }
+        for (final int highlightPosition : highlightPositions) {
+            if (checkedPosition == highlightPosition) return true;
+        }
+        return false;
     }
 
     private CharSequence getEntry(int position) {

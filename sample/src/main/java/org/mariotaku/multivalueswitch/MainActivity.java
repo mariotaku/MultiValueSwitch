@@ -26,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
             R.color.material_orange, R.color.material_deep_orange};
 
     private MultiValueSwitch mMultiValueSwitch;
+    private MultiValueSwitch mMultiValueSwitchColored;
     private View mChangeButton;
 
     @Override
@@ -41,7 +42,8 @@ public class MainActivity extends AppCompatActivity {
                         String.valueOf(mMultiValueSwitch.getCheckedPosition()), Toast.LENGTH_SHORT).show();
             }
         });
-        mMultiValueSwitch.setOnThumbOffsetChangeListener(new MultiValueSwitch.OnThumbPositionChangeListener() {
+        mMultiValueSwitch.setHighlightCheckedPositions(new int[]{1, 2});
+        mMultiValueSwitchColored.setOnThumbOffsetChangeListener(new MultiValueSwitch.OnThumbPositionChangeListener() {
             ArgbEvaluator mEvaluator = new ArgbEvaluator();
 
             @Override
@@ -57,16 +59,16 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     randColor = (int) mEvaluator.evaluate(itemOffset, colors[position], colors[position + 1]);
                 }
-                mMultiValueSwitch.setThumbTintList(ColorStateList.valueOf(randColor));
-                mMultiValueSwitch.setTrackTintList(createSwitchTrackColorStateList(randColor));
-                ViewCompat.setBackgroundTintList(mMultiValueSwitch, createButtonColorStateList(Color.TRANSPARENT, randColor));
+                mMultiValueSwitchColored.setThumbTintList(ColorStateList.valueOf(randColor));
+                mMultiValueSwitchColored.setTrackTintList(createSwitchTrackColorStateList(randColor));
+                ViewCompat.setBackgroundTintList(mMultiValueSwitchColored, createButtonColorStateList(Color.TRANSPARENT, randColor));
             }
         });
         mChangeButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 final int max = (int) (2 + Math.random() * 5);
-                mMultiValueSwitch.setMax(max);
+                mMultiValueSwitchColored.setMax(max);
                 int arrayStart = (int) (Math.random() * PRESET_COLORS.length), arrayEnd = arrayStart + max;
                 int[] colors = new int[max];
                 final MainActivity context = MainActivity.this;
@@ -74,11 +76,16 @@ public class MainActivity extends AppCompatActivity {
                     colors[i] = ContextCompat.getColor(context, PRESET_COLORS[(arrayStart + i)
                             % PRESET_COLORS.length]);
                 }
-                int pos = mMultiValueSwitch.getCheckedPosition();
+                int pos = mMultiValueSwitchColored.getCheckedPosition();
                 final int randColor = colors[pos];
-                mMultiValueSwitch.setTag(colors);
-                mMultiValueSwitch.setThumbTintList(ColorStateList.valueOf(randColor));
-                mMultiValueSwitch.setTrackTintList(createSwitchTrackColorStateList(randColor));
+                mMultiValueSwitchColored.setTag(colors);
+                mMultiValueSwitchColored.setThumbTintList(ColorStateList.valueOf(randColor));
+                mMultiValueSwitchColored.setTrackTintList(createSwitchTrackColorStateList(randColor));
+                int[] highlightCheckedPositions = new int[max - 1];
+                for (int i = 0; i < highlightCheckedPositions.length; i++) {
+                    highlightCheckedPositions[i] = i + 1;
+                }
+                mMultiValueSwitchColored.setHighlightCheckedPositions(highlightCheckedPositions);
             }
         });
     }
@@ -135,6 +142,7 @@ public class MainActivity extends AppCompatActivity {
     public void onContentChanged() {
         super.onContentChanged();
         mMultiValueSwitch = ((MultiValueSwitch) findViewById(R.id.mvs));
+        mMultiValueSwitchColored = ((MultiValueSwitch) findViewById(R.id.mvs_colored));
         mChangeButton = findViewById(R.id.change);
     }
 }
